@@ -128,7 +128,6 @@ class DistanceSensor(Sensor):
         self.effect_geom = GeomContainer(rendering.make_circle(radius=5, filled=False))
         self.effect_geom.set_color(1, 0.5, 0.5)
         self.intersection_pos = [0, 0]
-        self.distance = 0
         self.max_distance = _DISTANCE_SENSOR_MAX_DISTANCE
         self._ray_segment = Segment()
         self._update_ray_segment()
@@ -187,6 +186,8 @@ class Robot(GeomContainer):
     def update_sensors(self, visible_objects):
         for sensor in self.sensors:
             sensor.detect(visible_objects)
+    def get_sensor_values(self):
+        return [sensor.value for sensor in self.sensors]
 
 UNIT_SQUARE = np.asarray([[-1, -1], [-1, 1], [1, 1], [1, -1]]) / 2
 
@@ -210,7 +211,7 @@ class ObstacleEnv(Env):
     def __init__(self):
         self.screen_width = 600
         self.screen_height = 400
-        self.state = np.zeros(8, dtype=np.float32)
+        self.state = np.zeros(_NUM_DISTANCE_SENSOR, dtype=np.float32)
         self.viewer = None
         self.robot = Robot()
         self.obstacles = []
@@ -249,10 +250,7 @@ class ObstacleEnv(Env):
         self.update_state()
         return self.state
     def update_state(self):
-        self.state[0:2] = self.robot.pos
-        self.state[2:4] = self.obstacles[0].pos
-        self.state[4:6] = self.obstacles[1].pos
-        self.state[6:8] = self.obstacles[2].pos
+        self.state[:] = self.robot.get_sensor_values()
     def register_visible_object(self, geom_container):
         self.visible_object.extend(geom_container.get_geom_list())
     def _render(self, mode='human', close=False):
@@ -283,6 +281,7 @@ def main():
         step_count = 0
         state = env.reset()
         while True:
+            print(state)
             env.render()
             if step_count != 60:
                 action = 0
