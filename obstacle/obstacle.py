@@ -235,7 +235,6 @@ class ObstacleEnv(Env):
             self.robot.rotate(60, deg=True)
         else:
             self.robot.rotate(-60, deg=True)
-        self.robot.update_sensors(self.visible_object)
         self.update_state()
         #
         reward = 1
@@ -250,6 +249,7 @@ class ObstacleEnv(Env):
         self.update_state()
         return self.state
     def update_state(self):
+        self.robot.update_sensors(self.visible_object)
         self.state[:] = self.robot.get_sensor_values()
     def register_visible_object(self, geom_container):
         self.visible_object.extend(geom_container.get_geom_list())
@@ -281,7 +281,6 @@ def main():
         step_count = 0
         state = env.reset()
         while True:
-            print(state)
             env.render()
             if step_count != 60:
                 action = 0
