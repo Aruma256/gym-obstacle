@@ -3,6 +3,9 @@ from numpy.random import randint
 from gym import Env
 from gym.envs.classic_control import rendering
 
+_NUM_DISTANCE_SENSOR = 20
+_DISTANCE_SENSOR_MAX_DISTANCE = 200
+
 class GeomContainer(rendering.Geom):
     def __init__(self, geom, collider_func=None, pos_x=0, pos_y=0, angle=0):
         rendering.Geom.__init__(self)
@@ -111,8 +114,11 @@ class Wall(GeomContainer):
 class Sensor(GeomContainer):
     def __init__(self, geom, **kwargs):
         GeomContainer.__init__(self, geom, **kwargs)
+        self.value = None
     def detect(self, obstacles):
         raise NotImplementedError()
+    def _set_sensor_value(self, value):
+        self.value = value
 
 class DistanceSensor(Sensor):
     def __init__(self, geom, **kwargs):
@@ -123,7 +129,7 @@ class DistanceSensor(Sensor):
         self.effect_geom.set_color(1, 0.5, 0.5)
         self.intersection_pos = [0, 0]
         self.distance = 0
-        self.max_distance = 200
+        self.max_distance = _DISTANCE_SENSOR_MAX_DISTANCE
         self._ray_segment = Segment()
         self._update_ray_segment()
     def render(self):
@@ -144,11 +150,13 @@ class DistanceSensor(Sensor):
         for obs in obstacles:
             intersections += obs.get_intersections([self._ray_segment])
         if len(intersections) > 0:
-            self.intersection_pos = get_nearest_point(intersections, self.abs_pos)
-            self.distance = np.linalg.norm(self.intersection_pos - self.abs_pos, ord=2)
+            intersection_pos = get_nearest_point(intersections, self.abs_pos)
+            distance = np.linalg.norm(self.intersection_pos - self.abs_pos, ord=2)
         else:
-            self.intersection_pos = self._ray_segment.end
-            self.distance = self.max_distance
+            intersection_pos = self._ray_segment.end
+            distance = self.max_distance
+        self.intersection_pos = intersection_pos
+        self._set_sensor_value(distance)
 
 class Robot(GeomContainer):
     def __init__(self, **kwargs):
@@ -159,11 +167,11 @@ class Robot(GeomContainer):
         self.set_color(0, 0, 1)
         #
         self.sensors = []
-        for i in range(20):
+        for i in range(_NUM_DISTANCE_SENSOR):
             dist_sensor = DistanceSensor(rendering.make_circle(5))
             dist_sensor.set_color(1, 0, 0)
-            dist_sensor.set_pos(*(rotate([30, 0], 360 / 20 * i, deg=True)))
-            dist_sensor.set_angle(360 / 20 * i, True)
+            dist_sensor.set_pos(*(rotate([30, 0], 360 / _NUM_DISTANCE_SENSOR * i, deg=True)))
+            dist_sensor.set_angle(360 / _NUM_DISTANCE_SENSOR * i, True)
             dist_sensor.add_attr(self.trans)
             self.sensors.append(dist_sensor)
     def render(self):
